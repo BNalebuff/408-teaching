@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Negotiation Journal Feedback</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,600;1,8..60,300&display=swap');
+:root{--ink:#1a1612;--paper:#f5f0e8;--paper-dark:#ede6d6;--accent:#8b2e0f;--accent-light:#c4501a;--green:#2a5c3f;--green-light:#e8f2ec;--red:#8b0f0f;--red-light:#f5e8e8;--amber:#7a5c00;--amber-light:#fdf3d0;--border:#c8bfaa;--muted:#6b5f4e}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Source Serif 4',Georgia,serif;background:var(--paper);color:var(--ink);min-height:100vh;background-image:radial-gradient(ellipse at 20% 0%,rgba(139,46,15,.06) 0%,transparent 60%),radial-gradient(ellipse at 80% 100%,rgba(42,92,63,.05) 0%,transparent 60%)}
+header{background:var(--ink);color:var(--paper);padding:1.25rem 2.5rem;display:flex;align-items:baseline;gap:1.5rem;border-bottom:3px solid var(--accent)}
+header h1{font-family:'Playfair Display',serif;font-size:1.5rem;font-weight:700}
+header span{font-size:.82rem;color:#a09080;font-style:italic}
+.layout{display:grid;grid-template-columns:1fr 430px;min-height:calc(100vh - 68px)}
+.left{padding:1.75rem 2.25rem;border-right:1px solid var(--border);overflow-y:auto}
+.slabel{font-size:.67rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin-bottom:.55rem}
+.meta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:.85rem;margin-bottom:1.4rem}
+.mf label{display:block;font-size:.67rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:.25rem}
+.mf input,.mf select{width:100%;font-family:'Source Serif 4',serif;font-size:.88rem;padding:.4rem .55rem;border:1px solid var(--border);border-radius:2px;background:white;color:var(--ink);outline:none}
+.mf input:focus,.mf select:focus{border-color:var(--accent)}
+.nex-bar{background:var(--amber-light);border:1px solid #d4aa00;border-radius:2px;padding:.8rem 1rem;margin-bottom:1.4rem;display:flex;align-items:center;gap:1.25rem;flex-wrap:wrap}
+.nex-lbl{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--amber);font-weight:700;white-space:nowrap}
+.checks{display:flex;gap:1.1rem;flex-wrap:wrap}
+.ci{display:flex;align-items:center;gap:.35rem;font-size:.83rem;cursor:pointer;user-select:none}
+.ci input{width:13px;height:13px;accent-color:var(--accent);cursor:pointer}
+.upzone{border:2px dashed var(--border);border-radius:2px;margin-bottom:.55rem;cursor:pointer;transition:border-color .2s,background .2s}
+.upzone:hover,.upzone.dragover{border-color:var(--accent);background:rgba(139,46,15,.03)}
+.upinner{padding:.8rem 1rem;display:flex;align-items:center;gap:.7rem}
+.upicon{font-size:1.15rem;color:var(--muted)}
+.uptxt{font-size:.82rem;color:var(--muted);font-style:italic}
+.fstatus{font-size:.78rem;font-style:italic;margin-bottom:.45rem;min-height:1.1em}
+textarea.jtext{width:100%;min-height:240px;font-family:'Source Serif 4',serif;font-size:.9rem;line-height:1.7;color:var(--ink);background:white;border:1px solid var(--border);border-radius:2px;padding:1rem;resize:vertical;outline:none;transition:border-color .2s;box-shadow:inset 0 1px 3px rgba(0,0,0,.04)}
+textarea.jtext:focus{border-color:var(--accent)}
+.btnrow{display:flex;gap:.9rem;align-items:center;margin-top:.9rem;flex-wrap:wrap}
+.abtn{display:inline-flex;align-items:center;gap:.55rem;background:var(--accent);color:white;border:none;padding:.68rem 1.7rem;font-family:'Source Serif 4',serif;font-size:.9rem;cursor:pointer;border-radius:2px;transition:background .2s}
+.abtn:hover{background:var(--accent-light)}
+.abtn:disabled{background:var(--muted);cursor:default}
+.dbtn{display:inline-flex;align-items:center;gap:.5rem;background:var(--green);color:white;border:none;padding:.68rem 1.4rem;font-family:'Source Serif 4',serif;font-size:.88rem;cursor:pointer;border-radius:2px;transition:background .2s;display:none}
+.dbtn:hover{background:#3a7c54}
+.dbtn:disabled{background:var(--muted);cursor:default}
+.cbtn{font-family:'Source Serif 4',serif;font-size:.83rem;padding:.68rem 1.1rem;border:1px solid var(--border);background:transparent;cursor:pointer;border-radius:2px;color:var(--muted);transition:all .2s}
+.cbtn:hover{border-color:var(--ink);color:var(--ink)}
+@keyframes spin{to{transform:rotate(360deg)}}
+.right{background:white;padding:1.6rem;overflow-y:auto;max-height:calc(100vh - 68px);position:sticky;top:0;display:flex;flex-direction:column}
+.fhdr{display:flex;justify-content:space-between;align-items:center;margin-bottom:1.1rem;padding-bottom:.8rem;border-bottom:2px solid var(--ink);flex-shrink:0}
+.fhdr h2{font-family:'Playfair Display',serif;font-size:1.1rem}
+.cpbtn{font-family:'Source Serif 4',serif;font-size:.73rem;padding:.28rem .8rem;border:1px solid var(--border);background:transparent;cursor:pointer;border-radius:2px;color:var(--muted);transition:all .2s}
+.cpbtn:hover{border-color:var(--ink);color:var(--ink)}
+.fempty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--muted);text-align:center;padding:2rem;gap:.7rem}
+.eicon{font-size:2rem;opacity:.22}
+.fempty p{font-style:italic;font-size:.86rem;line-height:1.6;max-width:200px}
+.fcards{display:flex;flex-direction:column;gap:.8rem}
+.fcard{border:1px solid var(--border);border-radius:2px;overflow:hidden;animation:fadeUp .3s ease forwards;opacity:0}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.fcard:nth-child(1){animation-delay:.04s}.fcard:nth-child(2){animation-delay:.08s}.fcard:nth-child(3){animation-delay:.12s}.fcard:nth-child(4){animation-delay:.16s}.fcard:nth-child(5){animation-delay:.2s}.fcard:nth-child(6){animation-delay:.24s}.fcard:nth-child(7){animation-delay:.28s}.fcard:nth-child(8){animation-delay:.32s}.fcard:nth-child(9){animation-delay:.36s}
+.chead{padding:.48rem .8rem;display:flex;align-items:center;justify-content:space-between;font-size:.67rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.pos .chead{background:var(--green-light);color:var(--green)}.crit .chead{background:var(--red-light);color:var(--red)}.warn .chead{background:var(--amber-light);color:var(--amber)}.neut .chead{background:var(--paper-dark);color:var(--muted)}
+.flag{font-size:.63rem;padding:.08rem .42rem;border-radius:1px;font-weight:700}
+.fr{background:var(--red);color:white}.fg{background:var(--green);color:white}.fa{background:var(--amber);color:white}
+.cbody{padding:.7rem .8rem}
+.cbody textarea{width:100%;font-family:'Source Serif 4',serif;font-size:.84rem;line-height:1.6;border:1px dashed var(--border);border-radius:2px;padding:.45rem .55rem;resize:vertical;min-height:68px;background:transparent;color:var(--ink);outline:none}
+.cbody textarea:focus{border-color:var(--accent);border-style:solid}
+.ssec{margin-top:1.1rem;flex-shrink:0}
+.div{height:1px;background:var(--border);margin:1rem 0}
+.sgrid{display:grid;grid-template-columns:1fr 1fr;gap:.45rem;margin-bottom:.7rem}
+.si{background:var(--paper);border:1px solid var(--border);border-radius:2px;padding:.5rem .65rem}
+.si .sil{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-bottom:.25rem}
+.si ul{list-style:none;font-size:.78rem;line-height:1.5;padding:0}
+.ograde{background:var(--ink);color:var(--paper);border-radius:2px;padding:.65rem .95rem;display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
+.glbl{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;opacity:.5}
+.gsel{font-family:'Playfair Display',serif;font-size:1.15rem;background:transparent;color:var(--paper);border:1px solid rgba(255,255,255,.3);padding:.08rem .35rem;border-radius:2px;cursor:pointer}
+.gsel option{color:var(--ink);background:white}
+.errbox{background:var(--red-light);border:1px solid var(--red);border-radius:2px;padding:.9rem 1rem;color:var(--red);font-size:.82rem;line-height:1.65;margin-top:.75rem;display:none}
+.dl-bar{background:var(--green-light);border:1px solid var(--green);border-radius:2px;padding:.75rem 1rem;display:none;align-items:center;justify-content:space-between;gap:1rem;margin-top:.5rem}
+.dl-bar span{font-size:.82rem;color:var(--green)}
+.dl-btn{background:var(--green);color:white;border:none;padding:.45rem 1rem;font-family:'Source Serif 4',serif;font-size:.82rem;cursor:pointer;border-radius:2px}
+.dl-btn:hover{background:#3a7c54}
+</style>
+</head>
+<body>
+<header>
+  <h1>Negotiation Journal Feedback</h1>
+  <span>Advanced Negotiations · Yale SOM</span>
+</header>
+<div class="layout">
+  <div class="left">
+    <div class="slabel">Student Information</div>
+    <div class="meta-grid">
+      <div class="mf"><label>Student Name</label><input type="text" id="sname" placeholder="e.g. Jane Smith"></div>
+      <div class="mf"><label>Cohort</label><select id="cohort"><option value="">— select —</option><option>Gold</option><option>Blue</option><option>Silver</option></select></div>
+      <div class="mf"><label>Word Count</label><input type="number" id="wcount" placeholder="e.g. 697"></div>
+    </div>
+    <div class="slabel">Nexxtoil Case Flags</div>
+    <div class="nex-bar">
+      <span class="nex-lbl">Nexxtoil</span>
+      <div class="checks">
+        <label class="ci"><input type="checkbox" id="fOver"> Paid over $470k</label>
+        <label class="ci"><input type="checkbox" id="fAck"> Acknowledged overpayment</label>
+        <label class="ci"><input type="checkbox" id="fJob"> Found the job (tree)</label>
+        <label class="ci"><input type="checkbox" id="fMiss"> Missed job opportunity</label>
+      </div>
+    </div>
+    <div class="slabel" style="margin-top:1.2rem">Journal — Upload or Paste</div>
+    <div class="upzone" id="upzone">
+      <input type="file" id="finput" accept=".pdf,.docx,.txt" style="display:none">
+      <div class="upinner"><span class="upicon">⇪</span><span class="uptxt">Click to upload PDF, DOCX, or TXT — or drag &amp; drop</span></div>
+    </div>
+    <div class="fstatus" id="fstatus"></div>
+    <textarea class="jtext" id="jtext" placeholder="…or paste the journal text directly here."></textarea>
+    <div class="btnrow">
+      <button class="abtn" id="abtn"><span id="btxt">Generate Feedback</span></button>
+      <button class="dbtn" id="dbtn">⬇ Download Annotated File</button>
+      <button class="cbtn" id="clrbtn">Clear</button>
+    </div>
+    <div class="dl-bar" id="dlbar">
+      <span id="dlmsg">Feedback ready to download</span>
+      <button class="dl-btn" id="dlbtn2">Download</button>
+    </div>
+    <div class="errbox" id="errbox"></div>
+  </div>
+  <div class="right">
+    <div class="fhdr">
+      <h2>Feedback</h2>
+      <button class="cpbtn" id="cpbtn">Copy All</button>
+    </div>
+    <div class="fempty" id="empty"><div class="eicon">✎</div><p>Upload or paste a journal, then click <em>Generate Feedback</em>.</p></div>
+    <div id="fcards" class="fcards" style="display:none"></div>
+    <div id="ssec" class="ssec" style="display:none"></div>
+  </div>
+</div>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+// State
+let uploadedFile = null;
+let lastFeedback = null;
+
+// Upload
+const upzone=document.getElementById('upzone'),finput=document.getElementById('finput');
+upzone.addEventListener('click',()=>finput.click());
+upzone.addEventListener('dragover',e=>{e.preventDefault();upzone.classList.add('dragover')});
+upzone.addEventListener('dragleave',()=>upzone.classList.remove('dragover'));
+upzone.addEventListener('drop',e=>{e.preventDefault();upzone.classList.remove('dragover');if(e.dataTransfer.files[0])processFile(e.dataTransfer.files[0])});
+finput.addEventListener('change',e=>{if(e.target.files[0])processFile(e.target.files[0])});
+
+function setStat(m,c){const el=document.getElementById('fstatus');el.textContent=m;el.style.color=c||'var(--muted)'}
+
+async function processFile(file){
+  uploadedFile = file;
+  const ext=file.name.split('.').pop().toLowerCase();
+  setStat('Reading '+file.name+'…','var(--amber)');
+  try{
+    let text='';
+    if(ext==='txt'){text=await file.text();setStat('✓ Loaded '+file.name,'var(--green)');}
+    else if(ext==='pdf'){
+      const buf=await file.arrayBuffer();
+      const pdf=await pdfjsLib.getDocument({data:new Uint8Array(buf)}).promise;
+      for(let i=1;i<=pdf.numPages;i++){const pg=await pdf.getPage(i);const c=await pg.getTextContent();text+=c.items.map(it=>it.str).join(' ')+'\n';}
+      setStat('✓ Loaded '+file.name+' ('+pdf.numPages+' pages)','var(--green)');
+    }else if(ext==='docx'){
+      const buf=await file.arrayBuffer();const r=await mammoth.extractRawText({arrayBuffer:buf});text=r.value;setStat('✓ Loaded '+file.name,'var(--green)');
+    }else{setStat('Unsupported type. Use PDF, DOCX, or TXT.','var(--red)');return;}
+    document.getElementById('jtext').value=text.trim();
+    autoName(file.name);
+  }catch(err){console.error(err);setStat('Could not read file — please paste text manually.','var(--red)');}
+}
+
+function autoName(fn){
+  if(document.getElementById('sname').value)return;
+  let n=fn.replace(/\.[^.]+$/,'').replace(/_?(BJN|Graded|BN|JR|annotated|Journal|Negotiation|Final|Advanced|feedback|with)_?/gi,' ').replace(/[_\-]+/g,' ').trim().replace(/\b\w/g,c=>c.toUpperCase());
+  if(n.length>2&&n.length<60)document.getElementById('sname').value=n;
+}
+
+document.getElementById('abtn').addEventListener('click',analyze);
+document.getElementById('clrbtn').addEventListener('click',clearAll);
+document.getElementById('cpbtn').addEventListener('click',copyAll);
+document.getElementById('dbtn').addEventListener('click',downloadAnnotated);
+document.getElementById('dlbtn2').addEventListener('click',downloadAnnotated);
+
+async function analyze(){
+  const journal=document.getElementById('jtext').value.trim();
+  if(!journal){alert('Please paste or upload a journal first.');return;}
+  hideErr();
+  const btn=document.getElementById('abtn'),lbl=document.getElementById('btxt');
+  btn.disabled=true;
+  lbl.innerHTML='<span style="display:inline-flex;align-items:center;gap:7px"><span style="width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:white;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>Analyzing…</span>';
+
+  const name=document.getElementById('sname').value||'the student';
+  const over=document.getElementById('fOver').checked;
+  const ack=document.getElementById('fAck').checked;
+  const job=document.getElementById('fJob').checked;
+  const miss=document.getElementById('fMiss').checked;
+
+  const systemPrompt=`You are an instructor for Advanced Negotiations at Yale SOM, writing warm and constructive feedback on a student's negotiation journal. Your tone is encouraging, supportive, and collegial — like a mentor who genuinely wants the student to succeed. You acknowledge what they did well before pointing out where they can grow. You are honest and rigorous, but you deliver even critical feedback with care and respect.
+
+CORE CONCEPTS TO EVALUATE:
+- Pie = joint surplus created by a deal. Students should identify, calculate, and aim to split it evenly.
+- BATNA = best alternative to a negotiated agreement. It is a floor, not a target.
+- The tree = a creative value-expanding move (e.g. offering the Nexxtoil seller a job upon return from sailing trip).
+- Students should think from the perspective of their ASSIGNED role, rather than their own personal values.
+- Preparation and pre-calculation before negotiating are essential.
+
+NEXXTOIL — IMPORTANT NOTE:
+The buyer's hard cap is $470,000. Paying more than this is a significant mistake that should be recognized.
+${over?'This student paid over $470,000. '+(ack?'They acknowledged this in their journal — acknowledge their self-awareness and gently encourage them to think more deeply about how it happened and what they would do differently.':'They did not mention this in their journal — this is important feedback to include. Raise it clearly but kindly, framing it as a learning opportunity.'):'This student did not overpay in Nexxtoil.'}
+${job?'This student identified the job offer (the "tree") as a creative solution — celebrate this insight specifically and explain why it mattered.':''}
+${miss?'This student did not discover the job opportunity — gently prompt them to think about why, and what signals they might have picked up on.':''}
+
+TONE GUIDELINES:
+- Start feedback with what the student did well or showed promise in.
+- Use "you" directly and warmly — this is personal feedback, not an evaluation report.
+- Avoid sounding like a rubric. Write as if speaking to the student.
+- For critical points, use phrases like "One area to think more about...", "I'd encourage you to consider...", "Something worth reflecting on..."
+- End the overall assessment on an encouraging, forward-looking note.
+
+Return ONLY a valid JSON object. Set keys to null if not meaningfully relevant.
+{
+  "pie": "feedback on pie identification and calculation",
+  "batna": "feedback on BATNA awareness",
+  "tree": "feedback on creative value / the tree",
+  "nexxtoil": "feedback on Nexxtoil payment",
+  "principled": "feedback on principled vs emotional reasoning",
+  "reflection": "feedback on depth of self-reflection",
+  "roleplay": "feedback on playing assigned role faithfully",
+  "prep": "feedback on preparation and pre-calculation",
+  "overall": "2-3 sentence warm, encouraging summary",
+  "grade": "HP or P or LP or F",
+  "strengths": ["specific strength", "another"],
+  "improvements": ["growth area phrased constructively", "another"]
+}`;
+
+  try{
+    const res=await fetch('/api/feedback',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({payload:{
+        model:'claude-sonnet-4-20250514',
+        max_tokens:1800,
+        system:systemPrompt,
+        messages:[{role:'user',content:'Student: '+name+'\n\nJournal:\n'+journal}]
+      }})
+    });
+    const wrap=await res.json();
+    if(!wrap.ok)throw new Error(wrap.error);
+    const raw=(wrap.data.content||[]).map(b=>b.text||'').join('');
+    const m=raw.match(/\{[\s\S]*\}/);
+    if(!m)throw new Error('No JSON in response');
+    lastFeedback=JSON.parse(m[0]);
+    render(lastFeedback,over,ack,job);
+  }catch(err){
+    console.error(err);showErr(err.message||String(err));
+  }
+  btn.disabled=false;lbl.textContent='Generate Feedback';
+}
+
+function render(data,over,ack,job){
+  document.getElementById('empty').style.display='none';
+  const ce=document.getElementById('fcards'),se=document.getElementById('ssec');
+  ce.innerHTML='';ce.style.display='flex';se.style.display='block';
+  const cfg={
+    pie:{l:'Pie Identification & Calculation',i:'◉',t:'neut'},
+    batna:{l:'BATNA Awareness',i:'⊥',t:'neut'},
+    tree:{l:'Creative Value / The Tree',i:'⌘',t:job?'pos':'neut'},
+    nexxtoil:{l:'Nexxtoil: Payment',i:'⚑',t:over&&!ack?'crit':over?'warn':'pos'},
+    principled:{l:'Principled Reasoning',i:'≡',t:'neut'},
+    reflection:{l:'Depth of Reflection',i:'◎',t:'neut'},
+    roleplay:{l:'Playing the Assigned Role',i:'◈',t:'neut'},
+    prep:{l:'Preparation',i:'▣',t:'neut'},
+    overall:{l:'Overall Assessment',i:'★',t:'neut'},
+  };
+  const badge={crit:'<span class="flag fr">⚠ Critical</span>',pos:'<span class="flag fg">✓ Strong</span>',warn:'<span class="flag fa">△ Note</span>',neut:''};
+  Object.entries(cfg).forEach(([k,c])=>{
+    if(!data[k])return;
+    const d=document.createElement('div');
+    d.className='fcard '+c.t;
+    d.innerHTML='<div class="chead"><span>'+c.i+' '+c.l+'</span>'+badge[c.t]+'</div><div class="cbody"><textarea rows="3">'+esc(data[k])+'</textarea></div>';
+    ce.appendChild(d);
+  });
+  const str=(data.strengths||[]).map(s=>'<li style="color:var(--green)">✓ '+esc(s)+'</li>').join('');
+  const imp=(data.improvements||[]).map(s=>'<li style="color:var(--accent)">→ '+esc(s)+'</li>').join('');
+  const gr=data.grade||'P';
+  const opts=['HP','P','LP','F'].map(g=>'<option'+(g===gr?' selected':'')+'>'+g+'</option>').join('');
+  se.innerHTML='<div class="div"></div><div class="slabel">Summary</div><div class="sgrid"><div class="si"><div class="sil">Strengths</div><ul>'+str+'</ul></div><div class="si"><div class="sil">To Develop</div><ul>'+imp+'</ul></div></div><div class="ograde"><span class="glbl">Suggested Grade</span><select class="gsel" id="gsel">'+opts+'</select></div>';
+
+  // Show download button if a file was uploaded
+  if(uploadedFile){
+    document.getElementById('dbtn').style.display='inline-flex';
+    document.getElementById('dlbar').style.display='flex';
+    document.getElementById('dlmsg').textContent=
+      'Ready to download annotated '+(uploadedFile.name.endsWith('.docx')?'DOCX':'PDF');
+  }
+}
+
+async function downloadAnnotated(){
+  if(!uploadedFile||!lastFeedback){
+    alert('Please generate feedback first.');return;
+  }
+  const btn=document.getElementById('dbtn');
+  const btn2=document.getElementById('dlbtn2');
+  btn.disabled=true;btn2.disabled=true;
+  btn.innerHTML='<span style="display:inline-flex;align-items:center;gap:7px"><span style="width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:white;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>Preparing…</span>';
+
+  // Collect edited feedback from textareas
+  const editedFeedback = Object.assign({}, lastFeedback);
+  const keys=['pie','batna','tree','nexxtoil','principled','reflection','roleplay','prep','overall'];
+  document.querySelectorAll('#fcards .fcard').forEach((card,i)=>{
+    const ta=card.querySelector('textarea');
+    const key=keys.find(k=>card.querySelector('.chead span').textContent.toLowerCase().includes(k==='pie'?'pie':k==='batna'?'batna':k==='tree'?'tree':k));
+    if(ta)editedFeedback[keys[i]]=ta.value;
+  });
+  const grade=document.getElementById('gsel')?.value||'';
+  const student=document.getElementById('sname').value||'Student';
+
+  try{
+    const fd=new FormData();
+    fd.append('file', uploadedFile, uploadedFile.name);
+    fd.append('feedback', JSON.stringify(editedFeedback));
+    fd.append('student', student);
+    fd.append('grade', grade);
+
+    const res=await fetch('/api/annotate',{method:'POST',body:fd});
+    const data=await res.json();
+    if(!data.ok)throw new Error(data.error);
+
+    // Trigger download
+    const bytes=atob(data.data);
+    const arr=new Uint8Array(bytes.length);
+    for(let i=0;i<bytes.length;i++)arr[i]=bytes.charCodeAt(i);
+    const blob=new Blob([arr],{type:data.mime});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=data.filename;a.click();
+    URL.revokeObjectURL(url);
+  }catch(err){
+    console.error(err);showErr('Download failed: '+err.message);
+  }
+  btn.disabled=false;btn2.disabled=false;
+  btn.innerHTML='⬇ Download Annotated File';
+}
+
+function copyAll(){
+  const cards=document.querySelectorAll('#fcards .fcard');
+  if(!cards.length)return;
+  const name=document.getElementById('sname').value||'Student';
+  let out='Feedback for '+name+'\n'+'─'.repeat(40)+'\n\n';
+  cards.forEach(c=>{
+    const lbl=c.querySelector('.chead span').textContent.trim();
+    const val=c.querySelector('textarea').value.trim();
+    if(val)out+=lbl+'\n'+val+'\n\n';
+  });
+  const g=document.getElementById('gsel');
+  if(g)out+='Suggested Grade: '+g.value;
+  navigator.clipboard.writeText(out).then(()=>{
+    const b=document.getElementById('cpbtn');b.textContent='Copied!';
+    setTimeout(()=>b.textContent='Copy All',2000);
+  });
+}
+
+function clearAll(){
+  ['jtext','sname','wcount'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('cohort').selectedIndex=0;
+  ['fOver','fAck','fJob','fMiss'].forEach(id=>document.getElementById(id).checked=false);
+  setStat('');hideErr();
+  document.getElementById('empty').style.display='flex';
+  document.getElementById('fcards').style.display='none';
+  document.getElementById('fcards').innerHTML='';
+  document.getElementById('ssec').style.display='none';
+  document.getElementById('ssec').innerHTML='';
+  document.getElementById('dbtn').style.display='none';
+  document.getElementById('dlbar').style.display='none';
+  finput.value='';
+  uploadedFile=null;lastFeedback=null;
+}
+
+function showErr(msg){const el=document.getElementById('errbox');el.style.display='block';el.innerHTML='<strong>Error:</strong> '+esc(msg);}
+function hideErr(){document.getElementById('errbox').style.display='none';}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+</script>
+</body>
+</html>
