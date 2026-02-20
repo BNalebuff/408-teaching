@@ -102,6 +102,7 @@ textarea.jtext:focus{border-color:var(--accent)}
         <label class="ci"><input type="checkbox" id="fJob" disabled> Found the job (tree)</label>
         <label class="ci"><input type="checkbox" id="fMiss" disabled> Missed job opportunity</label>
       </div>
+      <div id="nexMeta" style="font-size:.78rem;color:var(--muted);font-style:italic;margin-top:.3rem;width:100%"></div>
     </div>
     <div class="slabel" style="margin-top:1.2rem">Journal — Upload or Paste</div>
     <div class="upzone" id="upzone">
@@ -193,18 +194,20 @@ async function analyze(){
   lbl.innerHTML=spinner('Reading journal…');
   document.getElementById('nexStatus').textContent=' — detecting…';
 
-  let over=false, ack=false, job=false, miss=false;
+  let over=false, ack=false, job=false, miss=false, role='unknown', jobTiming='unknown';
 
   try{
-    const flagPrompt=`You are reading a student negotiation journal. Extract four specific facts about the Nexxtoil case.
-Return ONLY a JSON object with exactly these four boolean keys:
+    const flagPrompt=`You are reading a student negotiation journal. Extract specific facts about the Nexxtoil case.
+Return ONLY a JSON object with exactly these keys:
 {
-  "paid_over_470k": true if the student reports paying MORE than $470,000 for the Nexxtoil station (not equal to, strictly more than),
-  "acknowledged_overpayment": true if the student explicitly recognizes or discusses that paying over $470k was a mistake,
-  "found_job": true if the student mentions offering the seller a job (the sailing trip / return from sailing job offer) as a creative solution,
+  "role": "buyer" or "seller" or "unknown" — was the student playing the buyer or Bryce the seller?,
+  "paid_over_470k": true if the student reports paying MORE than $470,000 (strictly more, not equal),
+  "acknowledged_overpayment": true if the student explicitly recognizes paying over $470k was a mistake,
+  "found_job": true if the student mentions a job offer as a creative solution,
+  "job_timing": "after_trip" if the job was offered/accepted upon return from the sailing trip, "before_trip" if the job was immediate or before the trip, "unknown" if unclear or no job mentioned,
   "missed_job": true if the student mentions they did NOT find or missed the job opportunity
 }
-If the Nexxtoil case is not discussed, return all false. Be precise — only mark paid_over_470k if the amount is strictly greater than 470000.`;
+If the Nexxtoil case is not discussed, return role "unknown" and all booleans false. Be precise about paid_over_470k — only mark true if strictly greater than 470000.`;
 
     const flagRes=await fetch('/api/feedback',{
       method:'POST',
@@ -226,6 +229,8 @@ If the Nexxtoil case is not discussed, return all false. Be precise — only mar
       ack   = !!flags.acknowledged_overpayment;
       job   = !!flags.found_job;
       miss  = !!flags.missed_job;
+      role  = flags.role || 'unknown';
+      jobTiming = flags.job_timing || 'unknown';
     }
   }catch(err){
     console.warn('Flag detection failed, proceeding without flags:', err);
@@ -237,6 +242,10 @@ If the Nexxtoil case is not discussed, return all false. Be precise — only mar
   document.getElementById('fJob').checked   = job;
   document.getElementById('fMiss').checked  = miss;
   document.getElementById('nexStatus').textContent=' — detected automatically';
+  const metaParts = [];
+  if(role !== 'unknown') metaParts.push('Role: ' + role);
+  if(job && jobTiming !== 'unknown') metaParts.push('Job timing: ' + (jobTiming === 'after_trip' ? 'after trip ✓' : 'before trip ⚠'));
+  document.getElementById('nexMeta').textContent = metaParts.join(' · ');
 
   // ── Step 2: generate feedback ─────────────────────────────
   lbl.innerHTML=spinner('Generating feedback…');
@@ -250,28 +259,71 @@ CORE CONCEPTS TO EVALUATE:
 - Students should think from the perspective of their ASSIGNED role, rather than their own personal values.
 - Preparation and pre-calculation before negotiating are essential.
 
-NEXXTOIL — CRITICAL GRADING RULE. There are three distinct outcome levels:
+WORD LIMIT AND COVERAGE:
+Students have a 700-word limit and cover multiple negotiations. They cannot go deep on everything. This is expected and fine. Do NOT penalize a student for not addressing a dimension — simply set that feedback key to null and skip it. Only give feedback on dimensions the student actually wrote about. A journal that goes deep on one or two negotiations is better than one that superficially covers all of them.
 
-LEVEL 1 — GOOD: Paid less than $470,000. The pie is $70,000 (the gap between Bryce's walk-away of $400,000 and the buyer's cap of $470,000). An even split of the pie means paying $435,000. The more below $470k the student paid, the more pie they captured.
+GRADING PHILOSOPHY — REFLECTION OVER OUTCOME:
+The journal grade is primarily about the quality of the student's reflection, not how well they did in the negotiation. A student who got a poor outcome but deeply understands why — and draws a genuine lesson — should score higher than a student who got a great outcome but shows no insight. Ask yourself: does this student understand what happened and why? Do they identify a specific, transferable lesson? Have they changed how they will approach future negotiations? These are the marks of a high-quality journal. Reward honest self-assessment and intellectual curiosity. A student who says "I made this mistake, here's why it happened, here's what I'll do differently" is doing exactly what the journal is for.
 
-LEVEL 2 — BAD (zero pie): Paid exactly $470,000. The student captured zero pie — the entire $70,000 of joint surplus went to Bryce. The failure here is NOT about the job offer or creativity. The failure is simple: the student did not negotiate hard enough to get the price down from $470,000 toward $435,000 or below. The job offer is a separate matter about expanding the pie (making it bigger than $70,000), not about splitting it. Do not conflate the two. Frame the core feedback as: you got a deal, but you walked away with none of the value. You needed to push the price down — an even split of the pie would have meant paying $435,000.
+NEXXTOIL — CRITICAL GRADING RULE.
 
-LEVEL 3 — CATASTROPHIC (worse than no deal): Paid more than $470,000. This violates the student's own hard limit. It is worse than walking away — the student would have been better off with no deal at all. This is the kind of mistake that gets people fired in real life. Flag it seriously while remaining constructive.
+STEP 1: DETERMINE THE STUDENT'S ROLE.
+Read the journal carefully to determine whether the student was playing the BUYER role or the SELLER role (Bryce) in the Nexxtoil negotiation. The implications of the price are completely opposite depending on the role.
+
+STEP 2: EVALUATE THE PRICE BASED ON ROLE.
+
+The pie is $70,000 (gap between Bryce's walk-away of $400,000 and the buyer's cap of $470,000). An even split means a price of $435,000.
+
+IF THE STUDENT WAS THE BUYER:
+- Paid less than $470,000 → GOOD. The lower the price, the more pie the buyer captured. An even split would be $435,000.
+- Paid exactly $470,000 → BAD. The buyer captured zero pie. The entire $70,000 went to Bryce. This is a significant failure — the student got a deal but walked away with nothing from it. The fix was to push the price down toward $435,000. Do not treat this as acceptable.
+- Paid more than $470,000 → CATASTROPHIC. Worse than no deal. The student violated their own hard limit. This is the kind of mistake that gets people fired. Flag it seriously but constructively.
+
+IF THE STUDENT WAS THE SELLER (Bryce):
+- Received exactly $470,000 → EXCELLENT. The seller captured 100% of the pie. This is the best possible price outcome for the seller.
+- Received more than $470,000 → Also good for the seller, though unusual.
+- Received less than $470,000 → The seller gave away some pie. The closer to $400,000, the worse for the seller.
 
 ${over
-  ? 'THIS STUDENT PAID OVER $470,000 — LEVEL 3 CATASTROPHIC. ' + (ack
-      ? 'They acknowledged it. Commend the honesty, but be clear about the severity: this is worse than no deal, the kind of error with real-world consequences. Push them to understand exactly how it happened.'
-      : 'They did not acknowledge it at all — this is the single most important piece of feedback. Name it directly and seriously, while remaining constructive.')
-  : 'The student did not pay over $470,000. However, check the journal: if they paid exactly $470,000, apply LEVEL 2 feedback (zero pie). Do not praise or treat this as a success.'}
-${job?'This student identified the job offer (the "tree") — celebrate this insight specifically.':''}
-${miss?'This student missed the job opportunity — gently ask them to reflect on why.':''}
+  ? 'THIS STUDENT PAID OVER $470,000 — apply CATASTROPHIC feedback if they were the buyer; if they were the seller receiving over $470,000, that is actually favorable. ' + (ack
+      ? 'They acknowledged the overpayment — commend honesty but be clear about severity if they were the buyer.'
+      : 'They did not acknowledge it — if they were the buyer, this is the single most important piece of feedback.')
+  : 'The student did not pay over $470,000. If they were the buyer and paid exactly $470,000, apply ZERO PIE feedback. Do not praise this as a success.'}
 
-TONE GUIDELINES:
+STEP 3: EVALUATE THE JOB OPPORTUNITY.
+The "tree" in Nexxtoil is a job offer — offering Bryce a job to return to after his sailing trip. This expands the pie because Bryce values having a job to return to, and it costs the buyer relatively little.
+
+CRITICAL DISTINCTION — timing matters enormously:
+
+GOOD OUTCOME — Job offered/accepted AFTER the trip (upon return):
+This is the tree. The seller gets income security for when they return; the buyer gets a motivated future employee. Celebrate this if the student found it. Explain why it works: the two sides value it differently, which is what makes it a tree.
+
+BAD OUTCOME — Job offered/accepted BEFORE the trip (immediate employment):
+This is a failure, but the nature of the failure depends on the student's role:
+
+IF THE STUDENT WAS THE BUYER and agreed to a before-trip job:
+It is a good sign that they were thinking creatively about a job. But they needed to do a better job investigating the seller's needs. Had they probed more carefully, they would have learned that Bryce needs to leave immediately and has no place to stay — making a before-trip job impossible. The right move was to keep exploring until they found the version that works for both sides: a job upon return.
+
+IF THE STUDENT WAS THE SELLER (Bryce) and agreed to a before-trip job:
+This is quite bad. Bryce needs to leave on the trip immediately — he has no place to live and the whole point is to fund the voyage. Agreeing to work before the trip only adds to his anxiety and delays the very thing he's negotiating for. The seller should have pushed back against the idea of a before-trip job. Better options were available: ask for a job upon return from the trip (which is what Bryce actually needs), or if pressed on timing, offer to cut the trip slightly short rather than delay departure. The buyer raised the idea of a job — that was actually a promising signal. The seller's job was to reshape that idea into something that actually worked for them, not accept a version that made things worse.
+
+If a student mentions a before-trip job, give them credit for finding the concept of the tree, but be specific about why the timing is wrong and what they should have done instead — tailored to their role.
+
+IMPORTANT — USE THE STUDENT'S NAME, NOT "BRYCE":
+Always refer to the student by their own name in feedback. Even if they were playing the role of Bryce, do not call them Bryce. They are the student; Bryce is the character they played.
+
+${job?'This student found the job opportunity — confirm from the journal whether it was before or after the trip, and give feedback accordingly.':''}
+${miss?'This student did not find the job opportunity — gently encourage them to reflect on what signals they might have picked up on.':''}
+
+CONNECTING THE STUDENT'S OWN WORDS TO THEIR MISTAKES:
+When a student correctly diagnoses a general problem in their reflection (e.g. "I was bridging rather than expanding the pie", "I was too focused on the monetary outcome", "I didn't explore enough"), look for the specific moment in their journal where that pattern played out and connect the two explicitly. For example: if a student says they were bridging rather than expanding, and they also accepted a before-trip job when an after-trip job was available, point out that the job timing is exactly that mistake in action — they found an expansion opportunity but negotiated it as a compromise. Helping students see the link between their general insight and a specific decision makes the reflection more concrete and more useful.
 - Start feedback with what the student did well or showed promise in.
 - Use "you" directly and warmly — this is personal feedback, not an evaluation report.
 - Avoid sounding like a rubric. Write as if speaking to the student.
 - For critical points, use phrases like "One area to think more about...", "I'd encourage you to consider...", "Something worth reflecting on..."
+- If a student shows genuine self-awareness about a mistake, acknowledge that explicitly — good reflection is worth more than a good outcome.
 - End the overall assessment on an encouraging, forward-looking note.
+- Only comment on what the student actually wrote about. Do not invent feedback for negotiations or dimensions they didn't address.
 
 Return ONLY a valid JSON object. Set keys to null if not meaningfully relevant.
 {
@@ -284,7 +336,7 @@ Return ONLY a valid JSON object. Set keys to null if not meaningfully relevant.
   "roleplay": "feedback on playing assigned role faithfully",
   "prep": "feedback on preparation and pre-calculation",
   "overall": "2-3 sentence warm, encouraging summary",
-  "grade": "a number between 50 and 100 (50=F, 60=LP, 75=P, 88=HP, 95=exceptional)",
+  "grade": "a number between 60 and 100. Use this distribution as a guide: 60-70 (bottom 10% — poor reflection, little insight), 70-80 (next 20% — adequate but superficial), 80-85 (next 35% — solid reflection, some insight), 85-90 (next 20% — good reflection, clear lessons learned), 90-95 (next 10% — excellent reflection, genuine insight), 95-100 (top 5% — exceptional, rare). Most students should land in the 80-88 range. Be stingy with scores above 90.",
   "strengths": ["specific strength", "another"],
   "improvements": ["growth area phrased constructively", "another"]
 }`;
@@ -297,7 +349,7 @@ Return ONLY a valid JSON object. Set keys to null if not meaningfully relevant.
         model:'claude-sonnet-4-20250514',
         max_tokens:1800,
         system:systemPrompt,
-        messages:[{role:'user',content:'Student: '+name+'\n\nJournal:\n'+journal}]
+        messages:[{role:'user',content:'Student: '+name+'\nNexxtoil role detected: '+role+'\nJob timing detected: '+jobTiming+'\n\nJournal:\n'+journal}]
       }})
     });
     const wrap=await res.json();
@@ -341,8 +393,8 @@ function render(data,over,ack,job){
   });
   const str=(data.strengths||[]).map(s=>'<li style="color:var(--green)">✓ '+esc(s)+'</li>').join('');
   const imp=(data.improvements||[]).map(s=>'<li style="color:var(--accent)">→ '+esc(s)+'</li>').join('');
-  const gr=data.grade||'75';
-  se.innerHTML='<div class="div"></div><div class="slabel">Summary</div><div class="sgrid"><div class="si"><div class="sil">Strengths</div><ul>'+str+'</ul></div><div class="si"><div class="sil">To Develop</div><ul>'+imp+'</ul></div></div><div class="ograde"><span class="glbl">Suggested Grade</span><input class="gsel" id="gsel" type="number" min="50" max="100" value="'+esc(String(gr))+'" style="width:70px;font-family:\'Playfair Display\',serif;font-size:1.15rem;background:transparent;color:var(--paper);border:1px solid rgba(255,255,255,.3);padding:.08rem .35rem;border-radius:2px;text-align:center;-moz-appearance:textfield"></div>';
+  const gr=data.grade||'82';
+  se.innerHTML='<div class="div"></div><div class="slabel">Summary</div><div class="sgrid"><div class="si"><div class="sil">Strengths</div><ul>'+str+'</ul></div><div class="si"><div class="sil">To Develop</div><ul>'+imp+'</ul></div></div><div class="ograde"><span class="glbl">Suggested Grade</span><input class="gsel" id="gsel" type="number" min="60" max="100" value="'+esc(String(gr))+'" style="width:70px;font-family:\'Playfair Display\',serif;font-size:1.15rem;background:transparent;color:var(--paper);border:1px solid rgba(255,255,255,.3);padding:.08rem .35rem;border-radius:2px;text-align:center;-moz-appearance:textfield"></div>';
 
   // Show download button if a file was uploaded
   if(uploadedFile){
@@ -422,6 +474,7 @@ function clearAll(){
   ['jtext','sname','wcount'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('cohort').selectedIndex=0;
   ['fOver','fAck','fJob','fMiss'].forEach(id=>document.getElementById(id).checked=false);
+  document.getElementById('nexMeta').textContent='';
   setStat('');hideErr();
   document.getElementById('empty').style.display='flex';
   document.getElementById('fcards').style.display='none';
