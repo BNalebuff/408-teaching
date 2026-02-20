@@ -313,7 +313,11 @@ This is a significant failure on two counts. First, the seller needs to leave im
 If a student mentions a before-trip job, give them credit for finding the concept of the tree, but be specific about why the timing is wrong and what they should have done instead — tailored to their role.
 
 IMPORTANT — USE THE STUDENT'S NAME, NOT "BRYCE":
-CRITICAL LANGUAGE RULE: Never use the name "Bryce" or any other case character name when addressing the student. The student is not Bryce — they played a character named Bryce. Always say "you" or use the student's actual name. For example: say "you needed to leave immediately" not "Bryce needed to leave immediately". Using a character name in feedback addressed to the student is confusing and wrong. Write as if the student and the character are the same person, using "you" throughout.
+CRITICAL CONTENT RULES:
+1. Never repeat the same content across two sections. If you said something in "tree", do not say it again in "nexxtoil" or "roleplay". Each section must contain distinct, non-overlapping feedback.
+2. The "overall" section must not repeat the "roleplay" section. It should synthesize the whole journal, not echo one section.
+3. If a student mentions the class bell curve, they are explaining their mindset during the negotiation — do not reassure them about their grade or standing. The bell curve is context for understanding their behavior, not a complaint requiring a response.
+4. Never use the name "Bryce" or any other case character name when addressing the student. The student is not Bryce — they played a character named Bryce. Always say "you" or use the student's actual name. For example: say "you needed to leave immediately" not "Bryce needed to leave immediately". Using a character name in feedback addressed to the student is confusing and wrong. Write as if the student and the character are the same person, using "you" throughout.
 
 ${job?'This student found the job opportunity — confirm from the journal whether it was before or after the trip, and give feedback accordingly.':''}
 ${miss?'This student did not find the job opportunity — gently encourage them to reflect on what signals they might have picked up on.':''}
@@ -330,15 +334,15 @@ When a student correctly diagnoses a general problem in their reflection (e.g. "
 
 Return ONLY a valid JSON object. Set keys to null if not meaningfully relevant.
 {
-  "pie": "feedback on pie identification and calculation",
-  "batna": "feedback on BATNA awareness",
-  "tree": "feedback on creative value / the tree",
-  "nexxtoil": "feedback on Nexxtoil payment",
-  "principled": "feedback on principled vs emotional reasoning",
-  "reflection": "feedback on depth of self-reflection",
-  "roleplay": "feedback on playing assigned role faithfully",
-  "prep": "feedback on preparation and pre-calculation",
-  "overall": "2-3 sentence warm, encouraging summary",
+  "pie": "ONLY: did the student correctly identify and calculate the pie? Did they understand joint surplus and aim for an even split? Do not discuss BATNA, the tree, or role-play here.",
+  "batna": "ONLY: did the student understand their walk-away alternative and use it correctly as a floor, not a target? Do not discuss the tree or Nexxtoil payment here.",
+  "tree": "ONLY: did the student find creative value-expanding moves beyond the obvious transaction — specifically the job offer and its timing? This is the place to discuss job before vs. after trip. Do not repeat this in other sections.",
+  "nexxtoil": "ONLY: evaluate the monetary outcome of the Nexxtoil negotiation given the student's role (buyer or seller). For sellers, $470k is excellent pie capture. For buyers, evaluate against the $435k even-split benchmark. Do not discuss the tree/job here — that belongs in the tree section.",
+  "principled": "ONLY: did the student use principled, objective reasoning rather than emotional or reactive reasoning? Do not repeat their general lesson here — that belongs in reflection.",
+  "reflection": "ONLY: how deep and honest is the student's self-reflection? Did they identify specific, transferable lessons? Connect their stated general insight to specific decisions they made. This is where to praise or develop their meta-learning. Do not mention the bell curve or grade distribution.",
+  "roleplay": "ONLY: did the student play their assigned role faithfully — thinking from their character's perspective and interests, not their own personal values? Keep this to 2-3 sentences. Do NOT repeat the overall assessment here.",
+  "prep": "ONLY: did the student prepare adequately — pre-calculate scenarios, anticipate counterpart needs, plan questions? If preparation is not meaningfully discussed, set this to null.",
+  "overall": "2-3 sentences ONLY. This must be different from the roleplay section — do not repeat it. Summarize the student's arc: what they did well overall and the single most important thing to carry forward. End on an encouraging, forward-looking note.",
   "grade": "a number between 60 and 100. Use this distribution as a guide: 60-70 (bottom 10% — poor reflection, little insight), 70-80 (next 20% — adequate but superficial), 80-85 (next 35% — solid reflection, some insight), 85-90 (next 20% — good reflection, clear lessons learned), 90-95 (next 10% — excellent reflection, genuine insight), 95-100 (top 5% — exceptional, rare). Most students should land in the 80-88 range. Be stingy with scores above 90.",
   "strengths": ["specific strength", "another"],
   "improvements": ["growth area phrased constructively", "another"]
