@@ -108,7 +108,7 @@ def annotate_docx(raw_bytes, feedback, student, grade):
 
     if grade:
         g = doc.add_paragraph()
-        gr = g.add_run(f'Suggested Grade: {grade}')
+        gr = g.add_run(f'Grade: {grade}/100')
         gr.bold = True
         gr.font.size = Pt(12)
         gr.font.color.rgb = RGBColor(0x8b, 0x2e, 0x0f)
@@ -229,7 +229,7 @@ def annotate_pdf(raw_bytes, feedback, student, grade):
     story.append(HRFlowable(width='100%', thickness=2, color=ACCENT, spaceAfter=8))
 
     if grade:
-        story.append(Paragraph(f'Suggested Grade: {grade}', grade_style))
+        story.append(Paragraph(f'Grade: {grade}/100', grade_style))
 
     for key, label in LABELS.items():
         text = feedback.get(key)

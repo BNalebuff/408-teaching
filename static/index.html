@@ -93,14 +93,14 @@ textarea.jtext:focus{border-color:var(--accent)}
       <div class="mf"><label>Cohort</label><select id="cohort"><option value="">— select —</option><option>Gold</option><option>Blue</option><option>Silver</option></select></div>
       <div class="mf"><label>Word Count</label><input type="number" id="wcount" placeholder="e.g. 697"></div>
     </div>
-    <div class="slabel">Nexxtoil Case Flags</div>
+    <div class="slabel">Nexxtoil Flags <span id="nexStatus" style="font-style:italic;text-transform:none;letter-spacing:0;color:var(--muted);font-weight:400"> — detected automatically</span></div>
     <div class="nex-bar">
       <span class="nex-lbl">Nexxtoil</span>
       <div class="checks">
-        <label class="ci"><input type="checkbox" id="fOver"> Paid over $470k</label>
-        <label class="ci"><input type="checkbox" id="fAck"> Acknowledged overpayment</label>
-        <label class="ci"><input type="checkbox" id="fJob"> Found the job (tree)</label>
-        <label class="ci"><input type="checkbox" id="fMiss"> Missed job opportunity</label>
+        <label class="ci"><input type="checkbox" id="fOver" disabled> Paid over $470k</label>
+        <label class="ci"><input type="checkbox" id="fAck" disabled> Acknowledged overpayment</label>
+        <label class="ci"><input type="checkbox" id="fJob" disabled> Found the job (tree)</label>
+        <label class="ci"><input type="checkbox" id="fMiss" disabled> Missed job opportunity</label>
       </div>
     </div>
     <div class="slabel" style="margin-top:1.2rem">Journal — Upload or Paste</div>
@@ -186,13 +186,60 @@ async function analyze(){
   hideErr();
   const btn=document.getElementById('abtn'),lbl=document.getElementById('btxt');
   btn.disabled=true;
-  lbl.innerHTML='<span style="display:inline-flex;align-items:center;gap:7px"><span style="width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:white;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>Analyzing…</span>';
 
   const name=document.getElementById('sname').value||'the student';
-  const over=document.getElementById('fOver').checked;
-  const ack=document.getElementById('fAck').checked;
-  const job=document.getElementById('fJob').checked;
-  const miss=document.getElementById('fMiss').checked;
+
+  // ── Step 1: detect Nexxtoil flags ────────────────────────
+  lbl.innerHTML=spinner('Reading journal…');
+  document.getElementById('nexStatus').textContent=' — detecting…';
+
+  let over=false, ack=false, job=false, miss=false;
+
+  try{
+    const flagPrompt=`You are reading a student negotiation journal. Extract four specific facts about the Nexxtoil case.
+Return ONLY a JSON object with exactly these four boolean keys:
+{
+  "paid_over_470k": true if the student reports paying MORE than $470,000 for the Nexxtoil station (not equal to, strictly more than),
+  "acknowledged_overpayment": true if the student explicitly recognizes or discusses that paying over $470k was a mistake,
+  "found_job": true if the student mentions offering the seller a job (the sailing trip / return from sailing job offer) as a creative solution,
+  "missed_job": true if the student mentions they did NOT find or missed the job opportunity
+}
+If the Nexxtoil case is not discussed, return all false. Be precise — only mark paid_over_470k if the amount is strictly greater than 470000.`;
+
+    const flagRes=await fetch('/api/feedback',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({payload:{
+        model:'claude-sonnet-4-20250514',
+        max_tokens:200,
+        system:flagPrompt,
+        messages:[{role:'user',content:'Journal:\n'+journal}]
+      }})
+    });
+    const flagWrap=await flagRes.json();
+    if(!flagWrap.ok)throw new Error(flagWrap.error);
+    const flagRaw=(flagWrap.data.content||[]).map(b=>b.text||'').join('');
+    const flagMatch=flagRaw.match(/\{[\s\S]*\}/);
+    if(flagMatch){
+      const flags=JSON.parse(flagMatch[0]);
+      over  = !!flags.paid_over_470k;
+      ack   = !!flags.acknowledged_overpayment;
+      job   = !!flags.found_job;
+      miss  = !!flags.missed_job;
+    }
+  }catch(err){
+    console.warn('Flag detection failed, proceeding without flags:', err);
+  }
+
+  // Update checkboxes to show what Claude found
+  document.getElementById('fOver').checked  = over;
+  document.getElementById('fAck').checked   = ack;
+  document.getElementById('fJob').checked   = job;
+  document.getElementById('fMiss').checked  = miss;
+  document.getElementById('nexStatus').textContent=' — detected automatically';
+
+  // ── Step 2: generate feedback ─────────────────────────────
+  lbl.innerHTML=spinner('Generating feedback…');
 
   const systemPrompt=`You are an instructor for Advanced Negotiations at Yale SOM, writing warm and constructive feedback on a student's negotiation journal. Your tone is encouraging, supportive, and collegial — like a mentor who genuinely wants the student to succeed. You acknowledge what they did well before pointing out where they can grow. You are honest and rigorous, but you deliver even critical feedback with care and respect.
 
@@ -203,11 +250,21 @@ CORE CONCEPTS TO EVALUATE:
 - Students should think from the perspective of their ASSIGNED role, rather than their own personal values.
 - Preparation and pre-calculation before negotiating are essential.
 
-NEXXTOIL — IMPORTANT NOTE:
-The buyer's hard cap is $470,000. Paying more than this is a significant mistake that should be recognized.
-${over?'This student paid over $470,000. '+(ack?'They acknowledged this in their journal — acknowledge their self-awareness and gently encourage them to think more deeply about how it happened and what they would do differently.':'They did not mention this in their journal — this is important feedback to include. Raise it clearly but kindly, framing it as a learning opportunity.'):'This student did not overpay in Nexxtoil.'}
-${job?'This student identified the job offer (the "tree") as a creative solution — celebrate this insight specifically and explain why it mattered.':''}
-${miss?'This student did not discover the job opportunity — gently prompt them to think about why, and what signals they might have picked up on.':''}
+NEXXTOIL — CRITICAL GRADING RULE. There are three distinct outcome levels:
+
+LEVEL 1 — GOOD: Paid less than $470,000. The pie is $70,000 (the gap between Bryce's walk-away of $400,000 and the buyer's cap of $470,000). An even split of the pie means paying $435,000. The more below $470k the student paid, the more pie they captured.
+
+LEVEL 2 — BAD (zero pie): Paid exactly $470,000. The student captured zero pie — the entire $70,000 of joint surplus went to Bryce. The failure here is NOT about the job offer or creativity. The failure is simple: the student did not negotiate hard enough to get the price down from $470,000 toward $435,000 or below. The job offer is a separate matter about expanding the pie (making it bigger than $70,000), not about splitting it. Do not conflate the two. Frame the core feedback as: you got a deal, but you walked away with none of the value. You needed to push the price down — an even split of the pie would have meant paying $435,000.
+
+LEVEL 3 — CATASTROPHIC (worse than no deal): Paid more than $470,000. This violates the student's own hard limit. It is worse than walking away — the student would have been better off with no deal at all. This is the kind of mistake that gets people fired in real life. Flag it seriously while remaining constructive.
+
+${over
+  ? 'THIS STUDENT PAID OVER $470,000 — LEVEL 3 CATASTROPHIC. ' + (ack
+      ? 'They acknowledged it. Commend the honesty, but be clear about the severity: this is worse than no deal, the kind of error with real-world consequences. Push them to understand exactly how it happened.'
+      : 'They did not acknowledge it at all — this is the single most important piece of feedback. Name it directly and seriously, while remaining constructive.')
+  : 'The student did not pay over $470,000. However, check the journal: if they paid exactly $470,000, apply LEVEL 2 feedback (zero pie). Do not praise or treat this as a success.'}
+${job?'This student identified the job offer (the "tree") — celebrate this insight specifically.':''}
+${miss?'This student missed the job opportunity — gently ask them to reflect on why.':''}
 
 TONE GUIDELINES:
 - Start feedback with what the student did well or showed promise in.
@@ -227,7 +284,7 @@ Return ONLY a valid JSON object. Set keys to null if not meaningfully relevant.
   "roleplay": "feedback on playing assigned role faithfully",
   "prep": "feedback on preparation and pre-calculation",
   "overall": "2-3 sentence warm, encouraging summary",
-  "grade": "HP or P or LP or F",
+  "grade": "a number between 50 and 100 (50=F, 60=LP, 75=P, 88=HP, 95=exceptional)",
   "strengths": ["specific strength", "another"],
   "improvements": ["growth area phrased constructively", "another"]
 }`;
@@ -256,6 +313,9 @@ Return ONLY a valid JSON object. Set keys to null if not meaningfully relevant.
   btn.disabled=false;lbl.textContent='Generate Feedback';
 }
 
+function spinner(msg){
+  return '<span style="display:inline-flex;align-items:center;gap:7px"><span style="width:13px;height:13px;border:2px solid rgba(255,255,255,.35);border-top-color:white;border-radius:50%;display:inline-block;animation:spin .7s linear infinite"></span>'+msg+'</span>';
+}
 function render(data,over,ack,job){
   document.getElementById('empty').style.display='none';
   const ce=document.getElementById('fcards'),se=document.getElementById('ssec');
@@ -281,9 +341,8 @@ function render(data,over,ack,job){
   });
   const str=(data.strengths||[]).map(s=>'<li style="color:var(--green)">✓ '+esc(s)+'</li>').join('');
   const imp=(data.improvements||[]).map(s=>'<li style="color:var(--accent)">→ '+esc(s)+'</li>').join('');
-  const gr=data.grade||'P';
-  const opts=['HP','P','LP','F'].map(g=>'<option'+(g===gr?' selected':'')+'>'+g+'</option>').join('');
-  se.innerHTML='<div class="div"></div><div class="slabel">Summary</div><div class="sgrid"><div class="si"><div class="sil">Strengths</div><ul>'+str+'</ul></div><div class="si"><div class="sil">To Develop</div><ul>'+imp+'</ul></div></div><div class="ograde"><span class="glbl">Suggested Grade</span><select class="gsel" id="gsel">'+opts+'</select></div>';
+  const gr=data.grade||'75';
+  se.innerHTML='<div class="div"></div><div class="slabel">Summary</div><div class="sgrid"><div class="si"><div class="sil">Strengths</div><ul>'+str+'</ul></div><div class="si"><div class="sil">To Develop</div><ul>'+imp+'</ul></div></div><div class="ograde"><span class="glbl">Suggested Grade</span><input class="gsel" id="gsel" type="number" min="50" max="100" value="'+esc(String(gr))+'" style="width:70px;font-family:\'Playfair Display\',serif;font-size:1.15rem;background:transparent;color:var(--paper);border:1px solid rgba(255,255,255,.3);padding:.08rem .35rem;border-radius:2px;text-align:center;-moz-appearance:textfield"></div>';
 
   // Show download button if a file was uploaded
   if(uploadedFile){
