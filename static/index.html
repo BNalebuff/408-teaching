@@ -97,6 +97,7 @@ textarea.jtext:focus{border-color:var(--accent)}
     <div class="nex-bar">
       <span class="nex-lbl">Nexxtoil</span>
       <div class="checks">
+        <label class="ci"><input type="checkbox" id="fBuyer" disabled> Was the buyer</label>
         <label class="ci"><input type="checkbox" id="fOver" disabled> Paid over $470k</label>
         <label class="ci"><input type="checkbox" id="fAck" disabled> Acknowledged overpayment</label>
         <label class="ci"><input type="checkbox" id="fJob" disabled> Found the job (tree)</label>
@@ -194,7 +195,7 @@ async function analyze(){
   lbl.innerHTML=spinner('Reading journal…');
   document.getElementById('nexStatus').textContent=' — detecting…';
 
-  let over=false, ack=false, job=false, miss=false, role='unknown', jobTiming='unknown';
+  let buyer=false, over=false, ack=false, job=false, miss=false;
 
   try{
     const flagPrompt=`You are reading a student negotiation journal. Extract specific facts about the Nexxtoil case.
@@ -225,6 +226,7 @@ If the Nexxtoil case is not discussed, return role "unknown" and all booleans fa
     const flagMatch=flagRaw.match(/\{[\s\S]*\}/);
     if(flagMatch){
       const flags=JSON.parse(flagMatch[0]);
+      buyer = !!flags.was_buyer;
       over  = !!flags.paid_over_470k;
       ack   = !!flags.acknowledged_overpayment;
       job   = !!flags.found_job;
@@ -237,6 +239,7 @@ If the Nexxtoil case is not discussed, return role "unknown" and all booleans fa
   }
 
   // Update checkboxes to show what Claude found
+  document.getElementById('fBuyer').checked = buyer;
   document.getElementById('fOver').checked  = over;
   document.getElementById('fAck').checked   = ack;
   document.getElementById('fJob').checked   = job;
@@ -302,15 +305,15 @@ BAD OUTCOME — Job offered/accepted BEFORE the trip (immediate employment):
 This is a failure, but the nature of the failure depends on the student's role:
 
 IF THE STUDENT WAS THE BUYER and agreed to a before-trip job:
-It is a good sign that they were thinking creatively about a job. But they needed to do a better job investigating the seller's needs. Had they probed more carefully, they would have learned that Bryce needs to leave immediately and has no place to stay — making a before-trip job impossible. The right move was to keep exploring until they found the version that works for both sides: a job upon return.
+It is a good sign that they were thinking creatively about a job. But they needed to do a better job investigating the seller's needs. Had they probed more carefully, they would have learned that the seller needs to leave immediately and has no place to stay — making a before-trip job impossible. The right move was to keep exploring until they found the version that works for both sides: a job upon return.
 
-IF THE STUDENT WAS THE SELLER (Bryce) and agreed to a before-trip job:
-This is quite bad. Bryce needs to leave on the trip immediately — he has no place to live and the whole point is to fund the voyage. Agreeing to work before the trip only adds to his anxiety and delays the very thing he's negotiating for. The seller should have pushed back against the idea of a before-trip job. Better options were available: ask for a job upon return from the trip (which is what Bryce actually needs), or if pressed on timing, offer to cut the trip slightly short rather than delay departure. The buyer raised the idea of a job — that was actually a promising signal. The seller's job was to reshape that idea into something that actually worked for them, not accept a version that made things worse.
+IF THE STUDENT WAS THE SELLER and agreed to a before-trip job:
+This is a significant failure on two counts. First, the seller needs to leave immediately — they have no place to live and the whole point of the sale is to fund the voyage. Agreeing to work before the trip delays the very thing they are negotiating for: departure. Second, and more importantly, they missed the solution that would have actually helped them: a job upon return. A return job reduces the reserve fund needed for the trip, which means the seller could have accepted a lower price while still meeting their financial needs — or used it as a creative expansion of the pie. The seller should have pushed back against the before-trip job and redirected: "I can't work before I leave, but what about a job when I return?" That reshaping of the idea is the key skill they missed.
 
 If a student mentions a before-trip job, give them credit for finding the concept of the tree, but be specific about why the timing is wrong and what they should have done instead — tailored to their role.
 
 IMPORTANT — USE THE STUDENT'S NAME, NOT "BRYCE":
-Always refer to the student by their own name in feedback. Even if they were playing the role of Bryce, do not call them Bryce. They are the student; Bryce is the character they played.
+CRITICAL LANGUAGE RULE: Never use the name "Bryce" or any other case character name when addressing the student. The student is not Bryce — they played a character named Bryce. Always say "you" or use the student's actual name. For example: say "you needed to leave immediately" not "Bryce needed to leave immediately". Using a character name in feedback addressed to the student is confusing and wrong. Write as if the student and the character are the same person, using "you" throughout.
 
 ${job?'This student found the job opportunity — confirm from the journal whether it was before or after the trip, and give feedback accordingly.':''}
 ${miss?'This student did not find the job opportunity — gently encourage them to reflect on what signals they might have picked up on.':''}
@@ -473,7 +476,7 @@ function copyAll(){
 function clearAll(){
   ['jtext','sname','wcount'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('cohort').selectedIndex=0;
-  ['fOver','fAck','fJob','fMiss'].forEach(id=>document.getElementById(id).checked=false);
+  ['fBuyer','fOver','fAck','fJob','fMiss'].forEach(id=>document.getElementById(id).checked=false);
   document.getElementById('nexMeta').textContent='';
   setStat('');hideErr();
   document.getElementById('empty').style.display='flex';
